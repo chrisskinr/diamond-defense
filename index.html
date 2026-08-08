@@ -59,6 +59,7 @@
     font-family:'Lilita One'; font-size:26px; color:var(--chalk); flex:none;}
   .playercard.gwen .avatar{background:var(--pop);}
   .playercard.juju .avatar{background:#4E8FD8;}
+  .playercard.guest .avatar{background:#7A8B7F;}
   .playercard .nm{font-family:'Lilita One'; font-size:24px; line-height:1.05;}
   .playercard .st{font-size:12px; color:#5A6B7A; font-weight:800; margin-top:2px;}
   .playercard .go{margin-left:auto; font-family:'Lilita One'; font-size:15px; color:var(--grass);
@@ -111,8 +112,9 @@
     border:0; border-radius:14px; font-family:'Lilita One'; font-size:20px; padding:13px;
     box-shadow:0 5px 0 var(--optic-deep); cursor:pointer; transition:transform .08s;}
   .bigbtn:active{transform:translateY(3px); box-shadow:0 2px 0 var(--optic-deep);}
-  #quit{background:none; border:0; color:#9FC7AB; font-weight:800; font-size:13px; margin:14px auto 0;
+  #quit,#resetStats{background:none; border:0; color:#9FC7AB; font-weight:800; font-size:13px; margin:14px auto 0;
     display:block; cursor:pointer; text-decoration:underline;}
+  #resetStats{font-size:12px; margin-top:18px;}
   @media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important;} }
 </style>
 </head>
@@ -154,6 +156,11 @@
       <span><span class="nm">Juju</span><br><span class="st" id="stat-juju">First game — let's go!</span></span>
       <span class="go">PLAY ▸</span>
     </button>
+    <button class="playercard guest" data-player="__guest">
+      <span class="avatar">?</span>
+      <span><span class="nm">Guest</span><br><span class="st">Just visiting — nothing saved</span></span>
+      <span class="go">PLAY ▸</span>
+    </button>
 
     <div class="togglebox">
       <label class="switch"><input type="checkbox" id="littleArms" checked><span></span></label>
@@ -165,6 +172,7 @@
       <span>Advanced: keep score</span>
     </div>
     <p class="hint">When on, a close game can change the right play — like cutting a run down at the plate.</p>
+    <button id="resetStats">reset Gwen & Juju's stats</button>
   </div>
 
   <!-- GAME -->
@@ -279,7 +287,7 @@ function jobFor(pos, ball){
 /* =====================================================
    STORE — Gwen & Juju stats
 ===================================================== */
-const STORE_KEY = 'diamond-defense-v1';
+const STORE_KEY = 'diamond-defense-v2';
 function loadStore(){
   try{ return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ return {}; }
 }
@@ -547,11 +555,13 @@ function onTap(t, g){
   let earned = 0;
   if(good){ earned = base*mult; G.streak++; G.sessionPts+=earned; }
   else G.streak = 0;
-  // stats
-  const st = playerStats(G.player);
-  st.reps++; if(good) st.correct++;
-  st.points += earned; st.best = Math.max(st.best, G.streak);
-  savePlayer(G.player, st);
+  // stats (guests play for fun — nothing saved)
+  if(G.player!=='__guest'){
+    const st = playerStats(G.player);
+    st.reps++; if(good) st.correct++;
+    st.points += earned; st.best = Math.max(st.best, G.streak);
+    savePlayer(G.player, st);
+  }
   renderBoard();
   // verdict card
   const v=$('verdict');
@@ -580,13 +590,19 @@ $('quit').addEventListener('click', ()=>{
   refreshStartStats();
 });
 
+$('resetStats').addEventListener('click', ()=>{
+  if(confirm('Reset ALL saved stats for Gwen and Juju on this device?')){
+    localStorage.removeItem(STORE_KEY);
+    refreshStartStats();
+  }
+});
+
 function refreshStartStats(){
   for(const name of ['gwen','juju']){
     const st = playerStats(name);
-    if(st.reps){
-      const acc = Math.round(100*st.correct/st.reps);
-      $('stat-'+name).textContent = `${st.points} pts \u2022 best streak ${st.best} \u2022 ${acc}% right`;
-    }
+    $('stat-'+name).textContent = st.reps
+      ? `${st.points} pts \u2022 best streak ${st.best} \u2022 ${Math.round(100*st.correct/st.reps)}% right`
+      : `First game \u2014 let's go!`;
   }
 }
 refreshStartStats();
