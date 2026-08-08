@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Diamond Defense — Softball Smarts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --grass:#2F7D4C; --grass-dark:#193F28; --grass-deep:#12301E;
+    --chalk:#FFF9EC; --optic:#EFE347; --optic-deep:#D8CB1E;
+    --clay:#C1703A; --clay-dark:#9A5527;
+    --navy:#132A3E; --pop:#FF6B57; --sky:#8ED0F0;
+    --ok:#63D471; --bad:#FF6B57;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{margin:0; padding:0; background:
+    radial-gradient(120% 90% at 50% -10%, #3B8F5B 0%, var(--grass) 45%, var(--grass-dark) 100%);
+    min-height:100%; color:var(--chalk); font-family:'Nunito',sans-serif; font-weight:600;}
+  button{font-family:inherit;}
+  .disp{font-family:'Lilita One', sans-serif; font-weight:400; letter-spacing:.5px;}
+
+  #app{max-width:520px; margin:0 auto; padding:10px 12px 40px; position:relative;}
+
+  /* ---------- scoreboard strip ---------- */
+  #board{display:none; align-items:center; gap:10px; background:var(--navy);
+    border:3px solid #0B1B29; border-radius:14px; padding:8px 12px; margin-bottom:10px;
+    box-shadow:0 4px 0 #0B1B29;}
+  #board .slot{display:flex; flex-direction:column; align-items:center; gap:2px; min-width:44px;}
+  #board .lbl{font-size:9px; letter-spacing:1.5px; color:#7FA3C0; font-weight:900;}
+  .outdots{display:flex; gap:4px;}
+  .outdots i{width:11px;height:11px;border-radius:50%;background:#25455F;border:2px solid #0B1B29;}
+  .outdots i.on{background:var(--pop); box-shadow:0 0 6px var(--pop);}
+  .minidiamond{width:34px;height:34px;position:relative;}
+  .minidiamond b{position:absolute;width:11px;height:11px;background:#25455F;border:2px solid #0B1B29;transform:rotate(45deg);}
+  .minidiamond b.on{background:var(--optic); box-shadow:0 0 6px var(--optic);}
+  .minidiamond .b1{right:0;top:11px}.minidiamond .b2{left:11px;top:0}.minidiamond .b3{left:0;top:11px}
+  #scoreSlot .v{font-size:15px;color:var(--chalk)}
+  #board .spacer{flex:1}
+  #streakSlot .v{font-size:16px;color:var(--optic)}
+  #ptsSlot .v{font-size:16px;color:var(--chalk)}
+  .v{font-family:'Lilita One'; line-height:1;}
+  .flame{filter:drop-shadow(0 0 4px var(--pop));}
+
+  /* ---------- start screen ---------- */
+  #start{ text-align:center; padding-top:22px;}
+  #logoBall{width:104px;height:104px;margin:0 auto 6px; display:block; animation:bob 3.2s ease-in-out infinite;}
+  @keyframes bob{0%,100%{transform:translateY(0) rotate(-6deg)}50%{transform:translateY(-8px) rotate(6deg)}}
+  #start h1{font-size:46px; margin:2px 0 0; color:var(--optic);
+    text-shadow:0 3px 0 var(--optic-deep), 0 7px 0 rgba(0,0,0,.35);}
+  #start .sub{margin:6px 0 22px; color:#CFE8D6; font-weight:800;}
+  .playercard{display:flex; align-items:center; gap:14px; width:100%; text-align:left;
+    background:var(--chalk); color:var(--navy); border:0; border-radius:18px; padding:14px 16px;
+    margin:0 0 14px; cursor:pointer; box-shadow:0 5px 0 rgba(0,0,0,.35);
+    transition:transform .08s;}
+  .playercard:active{transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,.35);}
+  .playercard .avatar{width:54px;height:54px;border-radius:50%;display:grid;place-items:center;
+    font-family:'Lilita One'; font-size:26px; color:var(--chalk); flex:none;}
+  .playercard.gwen .avatar{background:var(--pop);}
+  .playercard.juju .avatar{background:#4E8FD8;}
+  .playercard .nm{font-family:'Lilita One'; font-size:24px; line-height:1.05;}
+  .playercard .st{font-size:12px; color:#5A6B7A; font-weight:800; margin-top:2px;}
+  .playercard .go{margin-left:auto; font-family:'Lilita One'; font-size:15px; color:var(--grass);
+    background:var(--optic); padding:8px 12px; border-radius:12px; box-shadow:0 3px 0 var(--optic-deep);}
+  .togglebox{display:flex; align-items:center; justify-content:center; gap:10px; margin-top:8px;
+    font-weight:800; color:#DCEFE2; font-size:14px;}
+  .switch{position:relative; width:52px; height:30px;}
+  .switch input{opacity:0;width:0;height:0;}
+  .switch span{position:absolute; inset:0; background:#1C5233; border-radius:20px; border:2px solid #0F2C1B; transition:.2s;}
+  .switch span:before{content:""; position:absolute; width:22px;height:22px; left:2px; top:2px;
+    background:var(--chalk); border-radius:50%; transition:.2s;}
+  .switch input:checked + span{background:var(--optic);}
+  .switch input:checked + span:before{transform:translateX(22px); background:var(--navy);}
+  .hint{font-size:12px; color:#9FC7AB; margin-top:4px;}
+
+  /* ---------- game ---------- */
+  #game{display:none;}
+  #situation{background:var(--chalk); color:var(--navy); border-radius:14px; padding:10px 14px;
+    margin-bottom:10px; box-shadow:0 4px 0 rgba(0,0,0,.3); font-size:14px; font-weight:800; text-align:center;}
+  #situation .posname{font-family:'Lilita One'; font-size:20px; color:var(--clay-dark); display:block;}
+
+  #question{background:var(--navy); border:3px solid #0B1B29; border-radius:14px; padding:12px 14px;
+    margin-bottom:10px; box-shadow:0 4px 0 #0B1B29; text-align:center;}
+  #question .phase{font-size:10px; letter-spacing:2px; color:#7FA3C0; font-weight:900; margin-bottom:4px;}
+  #question .qt{font-family:'Lilita One'; font-size:18px; color:var(--chalk); line-height:1.25;}
+  #question .qt em{color:var(--optic); font-style:normal;}
+
+  #fieldwrap{position:relative;}
+  #field{display:block; width:100%; height:auto; border-radius:18px;}
+  .tap{cursor:pointer;}
+  .tap circle.hit{fill:rgba(255,249,236,.14); stroke:var(--chalk); stroke-width:2; stroke-dasharray:4 4;}
+  .tap text{font-family:'Lilita One'; font-size:10.5px; fill:var(--chalk); text-anchor:middle; pointer-events:none;
+    paint-order:stroke; stroke:rgba(0,0,0,.55); stroke-width:2.5px;}
+  .tap.special circle.hit{stroke:var(--optic);}
+  .tap.special text{fill:var(--optic);}
+  .tap.correct circle.hit{fill:rgba(99,212,113,.4); stroke:var(--ok); stroke-dasharray:none; animation:pulse .5s 3;}
+  .tap.wrongpick circle.hit{fill:rgba(255,107,87,.4); stroke:var(--bad); stroke-dasharray:none;}
+  @keyframes pulse{50%{transform:scale(1.25)}}
+  .tap circle.hit{transform-box:fill-box; transform-origin:center;}
+
+  #verdict{display:none; margin-top:10px; border-radius:16px; padding:14px 16px; text-align:center;
+    box-shadow:0 4px 0 rgba(0,0,0,.3);}
+  #verdict.good{background:#1E5B31; border:3px solid var(--ok);}
+  #verdict.bad{background:#5B2A24; border:3px solid var(--bad);}
+  #verdict .big{font-family:'Lilita One'; font-size:26px; letter-spacing:.5px;}
+  #verdict.good .big{color:var(--ok);} #verdict.bad .big{color:#FFB4A9;}
+  #verdict .why{font-size:14px; margin:6px 0 2px; color:var(--chalk); font-weight:700;}
+  #verdict .pts{font-family:'Lilita One'; color:var(--optic); font-size:16px; margin-top:4px;}
+  .bigbtn{display:block; width:100%; margin-top:12px; background:var(--optic); color:var(--navy);
+    border:0; border-radius:14px; font-family:'Lilita One'; font-size:20px; padding:13px;
+    box-shadow:0 5px 0 var(--optic-deep); cursor:pointer; transition:transform .08s;}
+  .bigbtn:active{transform:translateY(3px); box-shadow:0 2px 0 var(--optic-deep);}
+  #quit{background:none; border:0; color:#9FC7AB; font-weight:800; font-size:13px; margin:14px auto 0;
+    display:block; cursor:pointer; text-decoration:underline;}
+  @media (prefers-reduced-motion: reduce){ *{animation:none !important; transition:none !important;} }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SCOREBOARD -->
+  <div id="board">
+    <div class="slot"><span class="lbl">OUTS</span><span class="outdots" id="outdots"><i></i><i></i></span></div>
+    <div class="slot"><span class="lbl">RUNNERS</span>
+      <span class="minidiamond"><b class="b1" id="mb1"></b><b class="b2" id="mb2"></b><b class="b3" id="mb3"></b></span></div>
+    <div class="slot" id="scoreSlot" style="display:none"><span class="lbl">US–THEM</span><span class="v" id="scoreV">0–0</span></div>
+    <div class="spacer"></div>
+    <div class="slot" id="streakSlot"><span class="lbl">STREAK</span><span class="v"><span class="flame">🔥</span><span id="streakV">0</span></span></div>
+    <div class="slot" id="ptsSlot"><span class="lbl">POINTS</span><span class="v" id="ptsV">0</span></div>
+  </div>
+
+  <!-- START -->
+  <div id="start">
+    <svg id="logoBall" viewBox="0 0 100 100">
+      <circle cx="50" cy="50" r="45" fill="#EFE347" stroke="#B8AC12" stroke-width="4"/>
+      <path d="M25 14 q 18 36 0 72" fill="none" stroke="#E0402A" stroke-width="3.5" stroke-linecap="round"/>
+      <path d="M75 14 q -18 36 0 72" fill="none" stroke="#E0402A" stroke-width="3.5" stroke-linecap="round"/>
+      <g stroke="#E0402A" stroke-width="2.5" stroke-linecap="round">
+        <path d="M22 26 l 8 3 M21 36 l 9 2 M21 46 l 9 1 M21 56 l 9 -1 M22 66 l 8 -2 M24 75 l 7 -3"/>
+        <path d="M78 26 l -8 3 M79 36 l -9 2 M79 46 l -9 1 M79 56 l -9 -1 M78 66 l -8 -2 M76 75 l -7 -3"/>
+      </g>
+    </svg>
+    <h1 class="disp">DIAMOND DEFENSE</h1>
+    <p class="sub">Know your job before the pitch. Every rep, every time.</p>
+
+    <button class="playercard gwen" data-player="gwen">
+      <span class="avatar">G</span>
+      <span><span class="nm">Gwen</span><br><span class="st" id="stat-gwen">First game — let's go!</span></span>
+      <span class="go">PLAY ▸</span>
+    </button>
+    <button class="playercard juju" data-player="juju">
+      <span class="avatar">J</span>
+      <span><span class="nm">Juju</span><br><span class="st" id="stat-juju">First game — let's go!</span></span>
+      <span class="go">PLAY ▸</span>
+    </button>
+
+    <div class="togglebox">
+      <label class="switch"><input type="checkbox" id="littleArms" checked><span></span></label>
+      <span>Little arms (shorter throws)</span>
+    </div>
+    <p class="hint">Outfielders always throw to 2nd — no hero throws. Turn off when the arms grow!</p>
+    <div class="togglebox">
+      <label class="switch"><input type="checkbox" id="scoreMode"><span></span></label>
+      <span>Advanced: keep score</span>
+    </div>
+    <p class="hint">When on, a close game can change the right play — like cutting a run down at the plate.</p>
+  </div>
+
+  <!-- GAME -->
+  <div id="game">
+    <div id="question"><div class="phase" id="qphase"></div><div class="qt" id="qtext"></div></div>
+    <div id="situation"></div>
+    <div id="fieldwrap"><svg id="field" viewBox="0 0 400 432"></svg></div>
+    <div id="verdict"><div class="big" id="vbig"></div><div class="why" id="vwhy"></div><div class="pts" id="vpts"></div>
+      <button class="bigbtn" id="nextBtn">NEXT ▸</button></div>
+    <button id="quit">back to dugout</button>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* =====================================================
+   DATA — field geometry (feet; home plate at 0,0; +y toward CF)
+===================================================== */
+const FT = {
+  bases: { B1:[42.43,42.43], B2:[0,84.85], B3:[-42.43,42.43], HOME:[0,0] },
+  fielders: {
+    P:[0,38], C:[0,-7], '1B':[46,50], '2B':[25,76], SS:[-25,76], '3B':[-46,50],
+    LF:[-72,142], CF:[0,162], RF:[72,142]
+  },
+  spots: {
+    BU1:[60,60], BU2:[0,112], BU3:[-60,60], BUHOME:[0,-19],
+    RELAY_L:[-36,112], RELAY_R:[36,112],
+    BULF:[-84,166], BUCF:[0,188], BURF:[84,166]
+  }
+};
+const POS_NAME = { P:'Pitcher', C:'Catcher', '1B':'First Base', '2B':'Second Base', SS:'Shortstop',
+  '3B':'Third Base', LF:'Left Field', CF:'Center Field', RF:'Right Field' };
+const TARGET_NAME = { B1:'1st base', B2:'2nd base', B3:'3rd base', HOME:'home plate',
+  BU1:'backing up 1st', BU2:'backing up 2nd', BU3:'backing up 3rd', BUHOME:'backing up home',
+  RELAY_L:'the relay spot', RELAY_R:'the relay spot',
+  BULF:'backing up left field', BUCF:'backing up center field', BURF:'backing up right field' };
+const POSITIONS = ['P','C','1B','2B','SS','3B','LF','CF','RF'];
+const INFIELD = ['P','C','1B','2B','SS','3B'];
+const OUTFIELD = ['LF','CF','RF'];
+
+/* top-down SVG transform: px = 200 + 1.6*x ; py = 380 - 1.6*y */
+const T = ([x,y]) => [200 + 1.6*x, 380 - 1.6*y];
+
+/* =====================================================
+   ENGINE — the softball brain (machine-pitch rules)
+===================================================== */
+function throwFor(pos, r, outs, scoreOn, lead, littleArms){
+  // r = {r1,r2,r3}; lead = our runs minus theirs (we are on defense)
+  if (OUTFIELD.includes(pos)){
+    if (littleArms)
+      return { t:'B2', why:'Little-arm rule: outfielders ALWAYS throw to 2nd. Short throw, runners freeze, and the infield takes it from there!' };
+    const leadRunner = r.r3 ? 3 : r.r2 ? 2 : r.r1 ? 1 : 0;
+    if (leadRunner >= 2) return { t:'HOME', why:'Throw one base AHEAD of the lead runner — they\u2019re headed home, so the ball goes home!' };
+    if (leadRunner === 1) return { t:'B3', why:'Throw one base AHEAD of the lead runner. The runner on 1st is racing to 2nd — beat them to 3rd!' };
+    return { t:'B2', why:'Nobody on? Fire it to 2nd base so the batter can\u2019t take extra bases.' };
+  }
+  const loaded = r.r1 && r.r2 && r.r3;
+  if (loaded){
+    if (pos==='2B' || pos==='SS')
+      return { t:'B2', why:'Bases loaded means a force at EVERY base. You\u2019re closest to 2nd — take the easy force!' };
+    return { t:'HOME', why:'Bases loaded means a force at home! Throw to the catcher and stop that run from scoring.' };
+  }
+  if (scoreOn && r.r3 && !r.r1 && outs < 2 && lead <= 0 && ['P','C','1B','3B'].includes(pos))
+    return { t:'HOME', why:'Close game and a runner on 3rd — you\u2019re near the plate, so cut that run down at home!' };
+  if (r.r1 && (pos==='2B' || pos==='SS'))
+    return { t:'B2', why:'Runner on 1st means a force at 2nd — and you\u2019re right there. Take the lead runner!' };
+  if (r.r1 && (pos==='P' || pos==='3B'))
+    return { t:'B2', why:'Runner on 1st is FORCED at 2nd — fire it to second base and get the lead runner!' };
+  if (pos==='1B')
+    return { t:'B1', why:'You\u2019re the closest one to the bag — field it and race to step on 1st yourself!' };
+  let why = 'Get the sure out at 1st base — that\u2019s the play, every time.';
+  if (r.r3 && !scoreOn) why = 'Don\u2019t chase the runner on 3rd — take the SURE out at 1st base.';
+  if (scoreOn && r.r3 && lead > 0) why = 'We\u2019ve got the lead, so no risky throws — take the easy out at 1st.';
+  return { t:'B1', why };
+}
+
+function jobFor(pos, ball){
+  const IN = INFIELD.includes(ball);
+  switch(pos){
+    case 'P':
+      if (ball==='C') return { t:'HOME', why:'The catcher left home to field it — YOU cover the plate!' };
+      if (ball==='1B') return { t:'B1', why:'First base fielded it away from the bag — the pitcher covers 1st. Run!' };
+      if (IN) return { t:'BU1', why:'The throw is going to 1st — get behind the bag in case it skips past.' };
+      return { t:'BUHOME', why:'Ball\u2019s in the outfield — back up home plate in case a throw comes flying in.' };
+    case 'C': return { t:'HOME', why:'Home plate is YOUR house. Guard it — no runner scores easy.' };
+    case '1B': return { t:'B1', why:'The ball\u2019s not yours, so your job is simple: get to 1st base and be ready for the throw.' };
+    case '2B':
+      if (ball==='RF') return { t:'RELAY_R', why:'Long throw coming from right field — run out and be the relay!' };
+      if (['3B','SS','LF','CF'].includes(ball)) return { t:'B2', why:'Ball\u2019s on the other side — 2nd base is YOURS to cover.' };
+      if (ball==='1B') return { t:'BU1', why:'The pitcher covers 1st on that play — you back up the throw behind the bag.' };
+      return { t:'BU2', why:'Shortstop takes the bag on that one — you back up 2nd in case the throw gets away.' };
+    case 'SS':
+      if (ball==='LF'||ball==='CF') return { t:'RELAY_L', why:'Long throw coming from the outfield — run out and be the relay!' };
+      if (ball==='3B') return { t:'B3', why:'Third base charged the ball, so their bag is open — YOU cover 3rd.' };
+      return { t:'B2', why:'Ball\u2019s on the right side — the shortstop covers 2nd base. That\u2019s you!' };
+    case '3B': return { t:'B3', why:'Stay home and guard 3rd base — runners love sneaking there when nobody\u2019s watching.' };
+    case 'LF':
+      if (ball==='CF') return { t:'BUCF', why:'Center is chasing it — run behind them in case it gets past.' };
+      if (ball==='RF') return { t:'BU2', why:'Ball\u2019s in right — drift in and back up 2nd base for the throw.' };
+      return { t:'BU3', why:'Infield ball? Left field backs up 3rd base. Every throw needs a backup!' };
+    case 'CF':
+      if (ball==='LF') return { t:'BULF', why:'Back up your teammate in left — nothing gets past TWO fielders.' };
+      if (ball==='RF') return { t:'BURF', why:'Back up your teammate in right — nothing gets past TWO fielders.' };
+      return { t:'BU2', why:'Infield ball? Center field backs up 2nd base. Hustle in behind the bag!' };
+    case 'RF':
+      if (ball==='CF') return { t:'BUCF', why:'Back up your teammate in center — nothing gets past TWO fielders.' };
+      if (ball==='LF') return { t:'BU2', why:'Ball\u2019s in left — drift in and back up 2nd base for the throw.' };
+      return { t:'BU1', why:'Infield ball? Right field backs up 1st base — wild throws are YOUR ball to save.' };
+  }
+}
+
+/* =====================================================
+   STORE — Gwen & Juju stats
+===================================================== */
+const STORE_KEY = 'diamond-defense-v1';
+function loadStore(){
+  try{ return JSON.parse(localStorage.getItem(STORE_KEY)) || {}; }catch(e){ return {}; }
+}
+function saveStore(s){ localStorage.setItem(STORE_KEY, JSON.stringify(s)); }
+function playerStats(name){
+  const s = loadStore();
+  return s[name] || { points:0, best:0, reps:0, correct:0 };
+}
+function savePlayer(name, st){ const s = loadStore(); s[name]=st; saveStore(s); }
+
+/* =====================================================
+   SOUND — tiny arcade blips
+===================================================== */
+let AC = null;
+function blip(good){
+  try{
+    AC = AC || new (window.AudioContext||window.webkitAudioContext)();
+    const t = AC.currentTime;
+    const notes = good ? [523,784] : [196,147];
+    notes.forEach((f,i)=>{
+      const o = AC.createOscillator(), g = AC.createGain();
+      o.type = good ? 'square' : 'sawtooth'; o.frequency.value = f;
+      g.gain.setValueAtTime(.001,t+i*.09); g.gain.exponentialRampToValueAtTime(.12,t+i*.09+.02);
+      g.gain.exponentialRampToValueAtTime(.001,t+i*.09+.16);
+      o.connect(g).connect(AC.destination); o.start(t+i*.09); o.stop(t+i*.09+.18);
+    });
+  }catch(e){}
+}
+
+/* =====================================================
+   TOP-DOWN FIELD — rotated to YOUR point of view.
+   You sit at the center; home plate is straight up ("true north"
+   from your position); the whole park is laid out as you face it.
+===================================================== */
+function makeView(pos){
+  const p = FT.fielders[pos];
+  const dx = FT.bases.HOME[0]-p[0], dy = FT.bases.HOME[1]-p[1];
+  const phi = Math.PI/2 - Math.atan2(dy,dx);           // rotate player->home to point "up"
+  const cos = Math.cos(phi), sin = Math.sin(phi);
+  const rot = q => { const ax=q[0]-p[0], ay=q[1]-p[1]; return [ax*cos - ay*sin, ax*sin + ay*cos]; };
+  // fit every base, job spot and fielder into the frame (bbox-centered so no corner is wasted)
+  const pts = [[0,0],...Object.values(FT.bases), ...Object.values(FT.spots), ...Object.values(FT.fielders)].map(q=>rot(q));
+  let minX=1e9,maxX=-1e9,minY=1e9,maxY=-1e9;
+  for(const [rx,ry] of pts){ minX=Math.min(minX,rx);maxX=Math.max(maxX,rx);minY=Math.min(minY,ry);maxY=Math.max(maxY,ry); }
+  const W=400,H=432,pad=34;
+  const k = Math.min(1.55, (W-2*pad)/(maxX-minX), (H-2*pad)/(maxY-minY));
+  const cx = W/2 - k*(minX+maxX)/2, cy = H/2 + k*(minY+maxY)/2;
+  const S = q => { const [rx,ry]=rot(q); return [cx + k*rx, cy - k*ry]; };
+  return { S, k };
+}
+const sub=(a,b)=>[a[0]-b[0],a[1]-b[1]];
+const nrm=v=>{const l=Math.hypot(v[0],v[1])||1; return [v[0]/l,v[1]/l];};
+
+function renderField(state, mode){
+  const svg = document.getElementById('field');
+  const { S, k } = makeView(state.pos);
+  const H0 = S(FT.bases.HOME);
+  const p0 = FT.fielders[state.pos];
+  const U = nrm(sub(S([p0[0]+10,p0[1]]), S(p0)));   // field +x on screen
+  const V = nrm(sub(S([p0[0],p0[1]+10]), S(p0)));   // field +y on screen
+  const at=(c,a,b)=>[c[0]+a*U[0]+b*V[0], c[1]+a*U[1]+b*V[1]];
+  const P=pt=>pt[0].toFixed(1)+','+pt[1].toFixed(1);
+
+  /* --- simple collision-aware label placement --- */
+  const boxes=[];
+  const overlaps=(x,y,w,h)=>boxes.some(b=>Math.abs(x-b.x)<(w+b.w)/2 && Math.abs(y-b.y)<(h+b.h)/2);
+  const claim=(x,y,w,h)=>boxes.push({x,y,w,h});
+  const place=(tx,ty,text,r)=>{ // returns [x,y] for a label near a circle of radius r at (tx,ty)
+    const w=text.length*6.0+6, h=12;
+    const cands=[[0,-(r+8)],[0,r+15],[r+w/2+2,4],[-(r+w/2+2),4],
+      [r+w/2-6,-(r+5)],[-(r+w/2-6),-(r+5)],[r+w/2-6,r+12],[-(r+w/2-6),r+12],[0,-(r+21)],[0,r+28]];
+    for(const [ox,oy] of cands){
+      const x=tx+ox, y=ty+oy;
+      if(x-w/2<4||x+w/2>396||y-h<4||y>428) continue;
+      if(!overlaps(x,y,w,h)){ claim(x,y,w,h); return [x,y]; }
+    }
+    const [ox,oy]=cands[0]; claim(tx+ox,ty+oy,w,h); return [tx+ox,ty+oy];
+  };
+
+  let out = `<defs>
+    <radialGradient id="ofg" cx=".5" cy=".5" r=".9"><stop offset="0" stop-color="#3E8E5C"/><stop offset="1" stop-color="#256A41"/></radialGradient>
+    <clipPath id="frame"><rect width="400" height="432" rx="18"/></clipPath>
+  </defs><g clip-path="url(#frame)">`;
+  out += `<rect width="400" height="432" rx="18" fill="url(#ofg)"/>`;
+  for(let r=70;r<340;r+=44)
+    out += `<circle cx="${H0[0]}" cy="${H0[1]}" r="${k*r}" fill="none" stroke="rgba(255,255,255,.05)" stroke-width="20"/>`;
+  out += `<circle cx="${H0[0]}" cy="${H0[1]}" r="${k*195}" fill="none" stroke="#12301E" stroke-width="9"/>`;
+  const D0 = S([0,60]);
+  out += `<circle cx="${D0[0]}" cy="${D0[1]}" r="${k*95}" fill="#C1703A"/>`;
+  const dc=[0,42.4];
+  const inset = b => { const d=nrm(sub(dc,b)); return [b[0]+9*d[0], b[1]+9*d[1]]; };
+  const gd=[S(inset(FT.bases.HOME)),S(inset(FT.bases.B1)),S(inset(FT.bases.B2)),S(inset(FT.bases.B3))];
+  out += `<path d="M ${P(gd[0])} L ${P(gd[1])} L ${P(gd[2])} L ${P(gd[3])} Z" fill="#3E8E5C"/>`;
+  out += `<line x1="${H0[0]}" y1="${H0[1]}" x2="${S([142,142])[0]}" y2="${S([142,142])[1]}" stroke="#FFF9EC" stroke-width="3"/>`;
+  out += `<line x1="${H0[0]}" y1="${H0[1]}" x2="${S([-142,142])[0]}" y2="${S([-142,142])[1]}" stroke="#FFF9EC" stroke-width="3"/>`;
+  const M0=S([0,40]);
+  out += `<circle cx="${M0[0]}" cy="${M0[1]}" r="${Math.max(9,k*9)}" fill="#A85E2E"/>`;
+  out += `<circle cx="${H0[0]}" cy="${H0[1]}" r="${Math.max(11,k*11)}" fill="#A85E2E"/>`;
+  const e=8.5;
+  for(const b of ['B1','B2','B3']){
+    const c=S(FT.bases[b]);
+    out += `<path d="M ${P(at(c,e,0))} L ${P(at(c,0,e))} L ${P(at(c,-e,0))} L ${P(at(c,0,-e))} Z" fill="#FFF9EC" stroke="#C9BCA4" stroke-width="1.5"/>`;
+  }
+  out += `<path d="M ${P(at(H0,-7,5))} L ${P(at(H0,7,5))} L ${P(at(H0,7,-1))} L ${P(at(H0,0,-8))} L ${P(at(H0,-7,-1))} Z" fill="#FFF9EC" stroke="#C9BCA4" stroke-width="1.5"/>`;
+
+  // runners (red), nudged up the basepath toward their next base
+  const nudge=(b,n)=>{ const d=nrm(sub(FT.bases[n],FT.bases[b])); return S([FT.bases[b][0]+8*d[0], FT.bases[b][1]+8*d[1]]); };
+  const rdot=([x,y])=>{ claim(x,y,18,18); return `<circle cx="${x}" cy="${y}" r="8" fill="#E0402A" stroke="#8E1F10" stroke-width="2.5"/>`; };
+  let runnerSvg='';
+  if(state.runners.r1) runnerSvg += rdot(nudge('B1','B2'));
+  if(state.runners.r2) runnerSvg += rdot(nudge('B2','B3'));
+  if(state.runners.r3) runnerSvg += rdot(nudge('B3','HOME'));
+
+  // tap targets: claim their space first so nothing lands on them
+  const targets = mode==='throw'
+    ? ['B1','B2','B3','HOME']
+    : ['B1','B2','B3','HOME','BU1','BU2','BU3','BUHOME','RELAY_L','RELAY_R','BULF','BUCF','BURF'];
+  const labels = {B1:'1B',B2:'2B',B3:'3B',HOME:'HOME',BU1:'BACK UP',BU2:'BACK UP',BU3:'BACK UP',BUHOME:'BACK UP',
+    RELAY_L:'RELAY',RELAY_R:'RELAY',BULF:'BACK UP',BUCF:'BACK UP',BURF:'BACK UP'};
+  const tpos={};
+  for(const t of targets){ tpos[t]=S(FT.bases[t]||FT.spots[t]); claim(tpos[t][0],tpos[t][1],36,36); }
+
+  // live/hypothetical ball marker: claim its space before any labels are placed
+  let ballSvg='';
+  if(state.ballLoc){
+    const [bx,by]=S(FT.fielders[state.ballLoc]);
+    ballSvg = `<g><circle cx="${bx}" cy="${by-20}" r="9" fill="#EFE347" stroke="#E0402A" stroke-width="2.5"/>
+      <path d="M${bx-4} ${by-25} q4 5 0 10 M${bx+4} ${by-25} q-4 5 0 10" stroke="#E0402A" stroke-width="1.6" fill="none"/></g>`;
+    claim(bx,by-20,24,24);
+  }
+
+  // teammates: YOU highlighted; tags skipped when they'd crowd a target
+  let mateSvg='';
+  for(const q of POSITIONS){
+    const [px,py]=S(FT.fielders[q]);
+    if(q===state.pos){
+      mateSvg += `<circle cx="${px}" cy="${py}" r="12" fill="#EFE347" stroke="#B8AC12" stroke-width="3.5"/>`;
+      const [lx,ly]=place(px,py,'YOU',12);
+      mateSvg += `<text x="${lx}" y="${ly}" text-anchor="middle" style="font-family:'Lilita One';font-size:13px" fill="#EFE347" paint-order="stroke" stroke="rgba(0,0,0,.65)" stroke-width="3.5">YOU</text>`;
+    } else {
+      mateSvg += `<circle cx="${px}" cy="${py}" r="6.5" fill="#FFF9EC" opacity=".9"/>`;
+      const crowded = targets.some(t=>Math.hypot(tpos[t][0]-px,tpos[t][1]-py)<30);
+      if(!crowded){
+        const [lx,ly]=place(px,py,q,7);
+        mateSvg += `<text x="${lx}" y="${ly}" text-anchor="middle" style="font-family:'Nunito';font-weight:900;font-size:9.5px" fill="#EAF6EE" paint-order="stroke" stroke="rgba(0,0,0,.5)" stroke-width="2">${q}</text>`;
+      }
+    }
+  }
+  out += mateSvg + runnerSvg + ballSvg;
+
+  // finally the targets themselves, labels routed around everything above
+  for(const t of targets){
+    const [x,y]=tpos[t];
+    const special = !FT.bases[t];
+    const [lx,ly]=place(x,y,labels[t],18);
+    out += `<g class="tap ${special?'special':''}" data-t="${t}">
+      <circle class="hit" cx="${x}" cy="${y}" r="18"/>
+      <text x="${lx}" y="${ly}">${labels[t]}</text>
+    </g>`;
+  }
+  out += `</g>`;
+  svg.innerHTML = out;
+  svg.querySelectorAll('.tap').forEach(g=>g.addEventListener('click', ()=>onTap(g.dataset.t, g)));
+}
+
+/* =====================================================
+   GAME FLOW
+===================================================== */
+const $ = id => document.getElementById(id);
+let G = null;
+
+const CHEER = ['GREAT READ!','HEADS-UP PLAY!','COACH IS SMILING!','WEB GEM BRAIN!','YOU KNEW IT!','ALL-STAR MOVE!'];
+const OOPS  = ['NOT QUITE!','ALMOST!','GOOD HUSTLE, WRONG SPOT!','SHAKE IT OFF!'];
+
+function newRep(){
+  const pos = POSITIONS[Math.floor(Math.random()*POSITIONS.length)];
+  const outs = Math.floor(Math.random()*3);
+  const combos = [[0,0,0],[1,0,0],[0,1,0],[0,0,1],[1,1,0],[1,0,1],[0,1,1],[1,1,1]];
+  const c = combos[Math.floor(Math.random()*combos.length)];
+  const runners = {r1:!!c[0], r2:!!c[1], r3:!!c[2]};
+  let us=0, them=0;
+  if(G.scoreOn){ us=Math.floor(Math.random()*7); them=Math.floor(Math.random()*7); }
+  // hypothetical off-ball spot for pre-pitch Q2
+  let q2loc; do{ q2loc = POSITIONS[Math.floor(Math.random()*POSITIONS.length)]; }while(q2loc===pos);
+  // live ball: ~35% chance it comes to YOU
+  let liveLoc = Math.random()<0.35 ? pos : POSITIONS[Math.floor(Math.random()*POSITIONS.length)];
+  G.rep = { pos, outs, runners, us, them, q2loc, liveLoc, phase:1 };
+  renderBoard(); renderSituation(); renderPhase();
+}
+
+function runnersText(r){
+  const on = [r.r1&&'1st', r.r2&&'2nd', r.r3&&'3rd'].filter(Boolean);
+  if(!on.length) return 'Nobody on base';
+  if(on.length===3) return 'Bases loaded!';
+  return 'Runner'+(on.length>1?'s':'')+' on '+on.join(' & ');
+}
+
+function renderBoard(){
+  const r=G.rep;
+  $('board').style.display='flex';
+  const dots=$('outdots').children;
+  dots[0].className = r.outs>=1?'on':''; dots[1].className = r.outs>=2?'on':'';
+  $('mb1').classList.toggle('on', r.runners.r1);
+  $('mb2').classList.toggle('on', r.runners.r2);
+  $('mb3').classList.toggle('on', r.runners.r3);
+  $('scoreSlot').style.display = G.scoreOn ? 'flex':'none';
+  if(G.scoreOn) $('scoreV').textContent = `${r.us}\u2013${r.them}`;
+  $('streakV').textContent = G.streak;
+  $('ptsV').textContent = G.sessionPts;
+}
+
+function renderSituation(){
+  const r=G.rep;
+  let s = `<span class="posname">You're playing ${POS_NAME[r.pos].toUpperCase()}</span>
+    ${r.outs} out${r.outs===1?'':'s'} \u2022 ${runnersText(r.runners)}`;
+  if(G.scoreOn){
+    const d=r.us-r.them;
+    s += d>0?` \u2022 We're up by ${d}`:d<0?` \u2022 We're down by ${-d}`:' \u2022 Tie game!';
+  }
+  $('situation').innerHTML = s;
+}
+
+function renderPhase(){
+  const r=G.rep;
+  $('verdict').style.display='none';
+  if(r.phase===1){
+    $('qphase').textContent='PRE-PITCH PLAN \u2022 1 OF 2';
+    $('qtext').innerHTML=`If the ball is hit to <em>YOU</em>\u2026 tap where it should go!`;
+    renderField({pos:r.pos, runners:r.runners, ballLoc:null}, 'throw');
+  } else if(r.phase===2){
+    $('qphase').textContent='PRE-PITCH PLAN \u2022 2 OF 2';
+    $('qtext').innerHTML=`If it's hit to <em>${POS_NAME[r.q2loc].toUpperCase()}</em> instead\u2026 tap where YOU go!`;
+    renderField({pos:r.pos, runners:r.runners, ballLoc:r.q2loc}, 'job');
+  } else {
+    const mine = r.liveLoc===r.pos;
+    $('qphase').textContent='\u26A1 THE PITCH IS HIT! \u26A1';
+    $('qtext').innerHTML = mine
+      ? `It's coming to <em>YOU</em>! Field it \u2014 tap your throw!`
+      : `It's hit to <em>${POS_NAME[r.liveLoc].toUpperCase()}</em>! Quick \u2014 tap your job!`;
+    renderField({pos:r.pos, runners:r.runners, ballLoc:r.liveLoc}, mine?'throw':'job');
+  }
+}
+
+function correctFor(phase){
+  const r=G.rep, lead = r.us-r.them;
+  if(phase===1) return throwFor(r.pos, r.runners, r.outs, G.scoreOn, lead, G.littleArms);
+  if(phase===2) return jobFor(r.pos, r.q2loc);
+  return r.liveLoc===r.pos ? throwFor(r.pos, r.runners, r.outs, G.scoreOn, lead, G.littleArms) : jobFor(r.pos, r.liveLoc);
+}
+
+function onTap(t, g){
+  if(G.locked) return; G.locked=true;
+  const r=G.rep;
+  const ans = correctFor(r.phase);
+  const good = t===ans.t;
+  const field = $('field');
+  field.querySelectorAll('.tap').forEach(el=>{
+    if(el.dataset.t===ans.t) el.classList.add('correct');
+  });
+  if(!good) g.classList.add('wrongpick');
+  blip(good);
+  // points
+  const base = r.phase===3 ? 15 : 10;
+  const mult = G.streak>=9?4 : G.streak>=6?3 : G.streak>=3?2 : 1;
+  let earned = 0;
+  if(good){ earned = base*mult; G.streak++; G.sessionPts+=earned; }
+  else G.streak = 0;
+  // stats
+  const st = playerStats(G.player);
+  st.reps++; if(good) st.correct++;
+  st.points += earned; st.best = Math.max(st.best, G.streak);
+  savePlayer(G.player, st);
+  renderBoard();
+  // verdict card
+  const v=$('verdict');
+  v.className = good?'good':'bad'; v.style.display='block';
+  $('vbig').textContent = good ? CHEER[Math.floor(Math.random()*CHEER.length)] : OOPS[Math.floor(Math.random()*OOPS.length)];
+  $('vwhy').textContent = (good?'':'The play is '+TARGET_NAME[ans.t]+'. ') + ans.why;
+  $('vpts').textContent = good ? `+${earned} points${mult>1?` (\u00D7${mult} streak bonus!)`:''}` : 'Streak reset \u2014 next rep!';
+  $('nextBtn').textContent = r.phase===1 ? 'NEXT ▸' : r.phase===2 ? 'PLAY BALL! ▸' : 'NEW REP ▸';
+  v.scrollIntoView({behavior:'smooth', block:'nearest'});
+}
+
+$('nextBtn').addEventListener('click', ()=>{
+  G.locked=false;
+  if(G.rep.phase<3){ G.rep.phase++; renderPhase(); }
+  else newRep();
+});
+
+document.querySelectorAll('.playercard').forEach(b=>b.addEventListener('click', ()=>{
+  G = { player:b.dataset.player, scoreOn:$('scoreMode').checked, littleArms:$('littleArms').checked, streak:0, sessionPts:0, locked:false };
+  $('start').style.display='none'; $('game').style.display='block';
+  newRep();
+}));
+
+$('quit').addEventListener('click', ()=>{
+  $('game').style.display='none'; $('board').style.display='none'; $('start').style.display='block';
+  refreshStartStats();
+});
+
+function refreshStartStats(){
+  for(const name of ['gwen','juju']){
+    const st = playerStats(name);
+    if(st.reps){
+      const acc = Math.round(100*st.correct/st.reps);
+      $('stat-'+name).textContent = `${st.points} pts \u2022 best streak ${st.best} \u2022 ${acc}% right`;
+    }
+  }
+}
+refreshStartStats();
+</script>
+</body>
+</html>
